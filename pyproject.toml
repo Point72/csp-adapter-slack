@@ -1,0 +1,113 @@
+[build-system]
+requires = [
+    "hatchling>=1.22.4,<1.23",
+    "pkginfo>=1.10,<1.11",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "csp_adapter_slack"
+description = "A csp adapter for slack"
+version = "0.1.0"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+authors = [{name = "the csp authors", email = "CSPOpenSource@point72.com"}]
+keywords = [
+    "csp",
+    "stream-processing",
+    "slack",
+    "chat",
+    "chatbot",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Jupyter",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+]
+dependencies = [
+    "csp",
+    "slack-sdk>=3",
+]
+
+[project.optional-dependencies]
+develop = [
+    "bump2version>=1.0.0",
+    "check-manifest",
+    "codespell>=2.2.6,<2.3",
+    "hatchling",
+    "mdformat>=0.7.17,<0.8",
+    "ruff>=0.5,<0.6",
+    "twine>=5,<5.2",
+    # test
+    "pytest",
+    "pytest-cov",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+
+[project.urls]
+Repository = "https://github.com/point72/csp-adapter-slack"
+Homepage = "https://github.com/point72/csp-adapter-slack"
+
+[tool.check-manifest]
+ignore = []
+
+[tool.hatch.build]
+artifacts = []
+
+[tool.hatch.build.sources]
+src = "/"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/csp_adapter_slack",
+    "LICENSE",
+    "README.md",
+]
+exclude = [
+    "/.github",
+    "/.gitignore",
+    "/docs",
+]
+
+[tool.hatch.build.targets.wheel]
+include = [
+    "/csp_adapter_slack",
+]
+exclude = [
+    "/.github",
+    "/.gitignore",
+    "/pyproject.toml",
+    "/docs",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+testpaths = "csp_adapter_slack/tests"
+
+[tool.ruff]
+line-length = 150
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+default-section = "third-party"
+known-first-party = ["csp_adapter_slack"]
+section-order = [
+    "future",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
