@@ -1,4 +1,4 @@
-`csp-adapter-slack` is written in Python and Javascript. While prebuilt wheels are provided for end users, it is also straightforward to build `csp-adapter-slack` from either the Python [source distribution](https://packaging.python.org/en/latest/specifications/source-distribution-format/) or the GitHub repository.
+`csp-adapter-slack` is written in Python. While prebuilt wheels are provided for end users, it is also straightforward to build `csp-adapter-slack` from either the Python [source distribution](https://packaging.python.org/en/latest/specifications/source-distribution-format/) or the GitHub repository.
 
 ## Table of Contents
 
@@ -93,7 +93,7 @@ make fix-docs
 
 ## Testing
 
-`csp-adapter-slack` has both Python and JavaScript tests. The bulk of the functionality is tested in Python, which can be run via `pytest`. First, install the Python development dependencies with
+`csp-adapter-slack` has extensive Python tests. The tests can be run via `pytest`. First, install the Python development dependencies with
 
 ```bash
 make develop
