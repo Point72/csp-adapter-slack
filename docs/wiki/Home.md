@@ -7,7 +7,7 @@ A [csp](https://github.com/point72/csp) adapter for [slack](https://slack.com)
 - [Learn more about csp](https://github.com/Point72/csp)
 - [Install csp-adapter-slack](Installation) and [get started](First-Steps)
 
-> \[!TIP\]
+> [!TIP]
 > Find relevant docs with GitHub’s search function, use `repo:Point72/csp-adapter-slack type:wiki <search terms>` to search the documentation Wiki Pages.
 
 ## Community
