@@ -1,11 +1,13 @@
-import pytest
 from datetime import timedelta
 from ssl import create_default_context
 from unittest.mock import MagicMock, call, patch
 
 import csp
+import pytest
 from csp import ts
-from csp_adapter_slack import SlackAdapterManager, SlackMessage, mention_user
+from pydantic import ValidationError
+
+from csp_adapter_slack import SlackAdapterConfig, SlackAdapterManager, SlackMessage, mention_user
 
 
 @csp.node
@@ -119,8 +121,10 @@ DIRECT_MESSAGE_PAYLOAD = {
 
 class TestSlack:
     def test_slack_tokens(self):
-        with pytest.raises(RuntimeError):
-            SlackAdapterManager("abc", "def")
+        with pytest.raises(ValidationError):
+            SlackAdapterConfig(app_token="abc", bot_token="xoxb-def")
+        with pytest.raises(ValidationError):
+            SlackAdapterConfig(app_token="xapp-abc", bot_token="def")
 
     @pytest.mark.parametrize("payload", (PUBLIC_CHANNEL_MENTION_PAYLOAD, DIRECT_MESSAGE_PAYLOAD))
     def test_slack(self, payload):
@@ -150,7 +154,7 @@ class TestSlack:
             clientmock.return_value.web_client.conversations_list.return_value = mock_list_response
 
             def graph():
-                am = SlackAdapterManager("xapp-1-dummy", "xoxb-dummy", ssl=create_default_context())
+                am = SlackAdapterManager(SlackAdapterConfig(app_token="xapp-1-dummy", bot_token="xoxb-dummy", ssl=create_default_context()))
 
                 # send a fake slack message to the app
                 stop = send_fake_message(clientmock, reqmock, am)
