@@ -1,3 +1,4 @@
+from pathlib import Path
 from ssl import SSLContext
 from typing import Optional
 
@@ -15,13 +16,19 @@ class SlackAdapterConfig(BaseModel):
 
     @field_validator("app_token")
     def validate_app_token(cls, v):
-        assert v.startswith("xapp-"), "App token must start with 'xapp-'"
-        return v
+        if v.startswith("xapp-"):
+            return v
+        elif Path(v).exists():
+            return Path(v).read_text().strip()
+        raise ValueError("App token must start with 'xoxb-' or be a file path")
 
     @field_validator("bot_token")
     def validate_bot_token(cls, v):
-        assert v.startswith("xoxb-"), "Bot token must start with 'xoxb-'"
-        return v
+        if v.startswith("xoxb-"):
+            return v
+        elif Path(v).exists():
+            return Path(v).read_text().strip()
+        raise ValueError("Bot token must start with 'xoxb-' or be a file path")
 
     @field_validator("ssl")
     def validate_ssl(cls, v):
