@@ -1,10 +1,9 @@
 import threading
 from logging import getLogger
 from queue import Queue
-from ssl import SSLContext
 from threading import Thread
 from time import sleep
-from typing import Dict, List, Optional, TypeVar
+from typing import Dict, List, TypeVar
 
 import csp
 from csp.impl.adaptermanager import AdapterManagerImpl
@@ -13,12 +12,13 @@ from csp.impl.pushadapter import PushInputAdapter
 from csp.impl.struct import Struct
 from csp.impl.types.tstype import ts
 from csp.impl.wiring import py_output_adapter_def, py_push_adapter_def
-
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
 from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.web import WebClient
+
+from .adapter_config import SlackAdapterConfig
 
 T = TypeVar("T")
 log = getLogger(__file__)
@@ -49,13 +49,10 @@ def mention_user(userid: str) -> str:
 
 
 class SlackAdapterManager(AdapterManagerImpl):
-    def __init__(self, app_token: str, bot_token: str, ssl: Optional[SSLContext] = None):
-        if not app_token.startswith("xapp-") or not bot_token.startswith("xoxb-"):
-            raise RuntimeError("Slack app token or bot token looks malformed")
-
+    def __init__(self, config: SlackAdapterConfig):
         self._slack_client = SocketModeClient(
-            app_token=app_token,
-            web_client=WebClient(token=bot_token, ssl=ssl),
+            app_token=config.app_token,
+            web_client=WebClient(token=config.bot_token, ssl=config.ssl),
         )
         self._slack_client.socket_mode_request_listeners.append(self._process_slack_message)
 

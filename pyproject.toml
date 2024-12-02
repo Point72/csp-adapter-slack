@@ -30,10 +30,12 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: Apache Software License",
 ]
 dependencies = [
     "csp",
+    "pydantic>=2",
     "slack-sdk>=3",
 ]
 
@@ -46,7 +48,7 @@ develop = [
     "mdformat>=0.7.17,<0.8",
     "mdformat-tables>=1,<1.1",
     "ruff>=0.5,<0.9",
-    "twine>=5,<6.1",
+    "twine>=5,<7",
     # test
     "pytest",
     "pytest-cov",
@@ -79,6 +81,19 @@ replace = 'version = "{new_version}"'
 [tool.check-manifest]
 ignore = []
 
+[tool.coverage.run]
+branch = true
+omit = []
+
+[tool.coverage.report]
+exclude_also = [
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@(abc\\.)?abstractmethod",
+]
+ignore_errors = true
+fail_under = 75
+
 [tool.hatch.build]
 artifacts = []
 
@@ -86,11 +101,7 @@ artifacts = []
 src = "/"
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "/csp_adapter_slack",
-    "LICENSE",
-    "README.md",
-]
+packages = ["csp_adapter_slack"]
 exclude = [
     "/.github",
     "/.gitignore",
@@ -98,9 +109,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-include = [
-    "/csp_adapter_slack",
-]
+packages = ["csp_adapter_slack"]
 exclude = [
     "/.github",
     "/.gitignore",
@@ -109,11 +118,15 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
+addopts = ["-vvv", "--junitxml=junit.xml"]
 asyncio_mode = "strict"
 testpaths = "csp_adapter_slack/tests"
 
 [tool.ruff]
 line-length = 150
+
+[tool.ruff.lint]
+extend-select = ["I"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
@@ -124,6 +137,7 @@ default-section = "third-party"
 known-first-party = ["csp_adapter_slack"]
 section-order = [
     "future",
+    "standard-library",
     "third-party",
     "first-party",
     "local-folder",
