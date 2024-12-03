@@ -118,7 +118,7 @@ class SlackAdapterManager(AdapterManagerImpl):
             if ret.status_code == 200:
                 # TODO OAuth scopes required
                 name = ret.data["user"]["profile"].get("real_name_normalized", ret.data["user"]["name"])
-                email = ret.data["user"]["profile"]["email"]
+                email = ret.data["user"]["profile"].get("email", "")
                 self._user_id_to_user_name[user_id] = name
                 self._user_name_to_user_id[name] = user_id  # TODO is this 1-1 in slack?
                 self._user_id_to_user_email[user_id] = email
@@ -197,14 +197,8 @@ class SlackAdapterManager(AdapterManagerImpl):
             return self._room_name_to_room_id.get(channel_name, None)
         return channel_id
 
-    def _get_tags_from_message(self, blocks, authorizations=None) -> List[str]:
+    def _get_tags_from_message(self, blocks) -> List[str]:
         """extract tags from message, potentially excluding the bot's own @"""
-        authorizations = authorizations or []
-        if len(authorizations) > 0:
-            bot_id = authorizations[0]["user_id"]  # TODO more than one?
-        else:
-            bot_id = ""
-
         tags = []
         to_search = blocks.copy()
 
@@ -216,11 +210,9 @@ class SlackAdapterManager(AdapterManagerImpl):
 
             if element.get("type", "") == "user":
                 tag_id = element.get("user_id")
-                if tag_id != bot_id:
-                    # TODO tag with id or with name?
-                    name, _ = self._get_user_from_id(tag_id)
-                    if name:
-                        tags.append(name)
+                name, _ = self._get_user_from_id(tag_id)
+                if name:
+                    tags.append(name)
         return tags
 
     def _process_slack_message(self, client: SocketModeClient, req: SocketModeRequest):
@@ -233,7 +225,7 @@ class SlackAdapterManager(AdapterManagerImpl):
             if req.payload["event"]["type"] in ("message", "app_mention") and req.payload["event"].get("subtype") is None:
                 user, user_email = self._get_user_from_id(req.payload["event"]["user"])
                 channel, channel_type = self._get_channel_from_id(req.payload["event"]["channel"])
-                tags = self._get_tags_from_message(req.payload["event"]["blocks"], req.payload["authorizations"])
+                tags = self._get_tags_from_message(req.payload["event"]["blocks"])
                 slack_msg = SlackMessage(
                     user=user or "",
                     user_email=user_email or "",
