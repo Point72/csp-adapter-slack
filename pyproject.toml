@@ -62,7 +62,7 @@ test = [
 Repository = "https://github.com/point72/csp-adapter-slack"
 Homepage = "https://github.com/point72/csp-adapter-slack"
 
-[toolbumpversion]
+[tool.bumpversion]
 current_version = "0.1.0"
 commit = true
 tag = false
