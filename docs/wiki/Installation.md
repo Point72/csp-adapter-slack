@@ -1,6 +1,6 @@
 ## Pre-requisites
 
-You need Python >=3.8 on your machine to install `csp-adapter-slack`.
+You need Python >=3.9 on your machine to install `csp-adapter-slack`.
 
 ## Install with `pip`
 
