@@ -9,6 +9,8 @@ A [csp](https://github.com/point72/csp) adapter for [slack](https://slack.com)
 
 ## Features
 
+The Slack adapter allows for reading and writing of messages from the [Slack](https://slack.com/) message platform using the [`slack-sdk`](https://tools.slack.dev/python-slack-sdk/).
+
 [More information is available in our wiki](https://github.com/Point72/csp-adapter-slack/wiki)
 
 ## Chat Framework
