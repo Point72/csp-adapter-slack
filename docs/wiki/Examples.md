@@ -1,4 +1,4 @@
-The below examples are available [in-source](https://github.com/point72/csp-adapter-slack/csp_adapter_slack/examples).
+The below examples are available [in-source](https://github.com/Point72/csp-adapter-slack/blob/main/csp_adapter_slack/examples/).
 They assume the presence of `.app_token` and `.bot_token` files in the run directory.
 Additionally, they assume all optional settings in [Setup](Setup) have been enabled.
 
