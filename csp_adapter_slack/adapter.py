@@ -9,7 +9,6 @@ import csp
 from csp.impl.adaptermanager import AdapterManagerImpl
 from csp.impl.outputadapter import OutputAdapter
 from csp.impl.pushadapter import PushInputAdapter
-from csp.impl.struct import Struct
 from csp.impl.types.tstype import ts
 from csp.impl.wiring import py_output_adapter_def, py_push_adapter_def
 from slack_sdk.errors import SlackApiError
@@ -19,33 +18,13 @@ from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.web import WebClient
 
 from .adapter_config import SlackAdapterConfig
+from .message import SlackMessage
 
 T = TypeVar("T")
 log = getLogger(__file__)
 
 
-__all__ = ("SlackMessage", "mention_user", "SlackAdapterManager", "SlackInputAdapterImpl", "SlackOutputAdapterImpl")
-
-
-class SlackMessage(Struct):
-    user: str
-    user_email: str  # email of the author
-    user_id: str  # user id of the author
-    tags: List[str]  # list of mentions
-
-    channel: str  # name of channel
-    channel_id: str  # id of channel
-    channel_type: str  # type of channel, in "message", "public" (app_mention), "private" (app_mention)
-
-    msg: str  # parsed text payload
-    reaction: str  # emoji reacts
-    thread: str  # thread id, if in thread
-    payload: dict  # raw message payload
-
-
-def mention_user(userid: str) -> str:
-    """Convenience method, more difficult to do in symphony but we want slack to be symmetric"""
-    return f"<@{userid}>"
+__all__ = ("SlackAdapterManager", "SlackInputAdapterImpl", "SlackOutputAdapterImpl")
 
 
 class SlackAdapterManager(AdapterManagerImpl):
@@ -76,6 +55,10 @@ class SlackAdapterManager(AdapterManagerImpl):
         self._user_id_to_user_email: Dict[str, str] = {}
         self._user_name_to_user_id: Dict[str, str] = {}
         self._user_email_to_user_id: Dict[str, str] = {}
+
+        # if subscribed to mentions AND events, will get 2 copies,
+        # so we want to dedupe by id
+        self._seen_msg_ids = set()
 
     def subscribe(self):
         return _slack_input_adapter(self, push_mode=csp.PushMode.NON_COLLAPSING)
@@ -167,7 +150,7 @@ class SlackAdapterManager(AdapterManagerImpl):
                 kind = self._channel_data_to_channel_kind(ret.data["channel"])
                 if kind == "message":
                     # TODO use same behavior as symphony adapter
-                    name = "DM"
+                    name = "IM"
                 else:
                     name = ret.data["channel"]["name"]
 
@@ -222,9 +205,18 @@ class SlackAdapterManager(AdapterManagerImpl):
             response = SocketModeResponse(envelope_id=req.envelope_id)
             client.send_socket_mode_response(response)
 
+            if req.payload["event"]["ts"] in self._seen_msg_ids:
+                # already seen, pop it and move on
+                self._seen_msg_ids.remove(req.payload["event"]["ts"])
+                return
+
+            # else add it so we don't process it again
+            self._seen_msg_ids.add(req.payload["event"]["ts"])
+
             if req.payload["event"]["type"] in ("message", "app_mention") and req.payload["event"].get("subtype") is None:
                 user, user_email = self._get_user_from_id(req.payload["event"]["user"])
                 channel, channel_type = self._get_channel_from_id(req.payload["event"]["channel"])
+
                 tags = self._get_tags_from_message(req.payload["event"]["blocks"])
                 slack_msg = SlackMessage(
                     user=user or "",
@@ -254,6 +246,7 @@ class SlackAdapterManager(AdapterManagerImpl):
                 # grab channel or DM
                 if hasattr(slack_msg, "channel_id") and slack_msg.channel_id:
                     channel_id = slack_msg.channel_id
+
                 elif hasattr(slack_msg, "channel") and slack_msg.channel:
                     # TODO DM
                     channel_id = self._get_channel_from_name(slack_msg.channel)
@@ -266,6 +259,7 @@ class SlackAdapterManager(AdapterManagerImpl):
                         name=slack_msg.reaction,
                         timestamp=slack_msg.thread,
                     )
+
                 elif hasattr(slack_msg, "msg") and slack_msg.msg:
                     try:
                         # send text to channel
