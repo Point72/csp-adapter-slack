@@ -193,7 +193,7 @@ class TestSlack:
 
             # check all inbound mocks got called
             if payload == PUBLIC_CHANNEL_MENTION_PAYLOAD:
-                assert clientmock.return_value.web_client.users_info.call_count == 2
+                assert clientmock.return_value.web_client.users_info.call_count == 3
             else:
                 assert clientmock.return_value.web_client.users_info.call_count == 1
             assert clientmock.return_value.web_client.conversations_info.call_count == 1

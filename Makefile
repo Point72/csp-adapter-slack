@@ -25,7 +25,7 @@ install:  ## install to site-packages
 test: ## run the python unit tests
 	python -m pytest -v csp_adapter_slack/tests --cov=csp_adapter_slack --cov-report xml --cov-report term-missing
 
-test: tests
+tests: test
 
 ###########
 # Linting #
