@@ -1,11 +1,11 @@
-The below examples are available in-source.
+The below examples are available [in-source](https://github.com/point72/csp-adapter-slack/csp_adapter_slack/examples).
 They assume the presence of `.app_token` and `.bot_token` files in the run directory.
 Additionally, they assume all optional settings in [Setup](Setup) have been enabled.
 
 # Emoji Wave
 
 Here is a simple example that waves when you mention the bot and say `hello`.
-It is available in-source at [`csp_adapter_slack/examples/hello.py`](https://github.com/point72/csp_adapter_slack/examples/hello.py).
+It is available in-source at [`csp_adapter_slack/examples/hello.py`](https://github.com/point72/csp-adapter-slack/csp_adapter_slack/examples/hello.py).
 
 ```python
 import csp
