@@ -150,3 +150,7 @@ $RECYCLE.BIN/
 # Coverage data
 # -------------
 **/coverage/
+
+# Secrets
+.app_token
+.bot_token

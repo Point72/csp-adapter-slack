@@ -11,6 +11,11 @@ A [csp](https://github.com/point72/csp) adapter for [slack](https://slack.com)
 
 [More information is available in our wiki](https://github.com/Point72/csp-adapter-slack/wiki)
 
+## Chat Framework
+
+`csp-chat` is a framework for writing cross-platform, command oriented chat bots.
+It will be released in 2025 with initial support for `Slack`, `Symphony`, and `Discord`.
+
 ## Installation
 
 Install with `pip`:
