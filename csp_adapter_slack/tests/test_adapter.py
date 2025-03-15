@@ -134,15 +134,15 @@ class TestSlack:
             reqmock.type = "events_api"
             reqmock.payload = payload
 
-            # mock out the user/room lookup responses
+            # mock out the user/channel lookup responses
             mock_user_response = MagicMock(name="users_info_mock")
             mock_user_response.status_code = 200
             mock_user_response.data = {"user": {"profile": {"real_name_normalized": "johndoe", "email": "johndoe@some.email"}, "name": "blerg"}}
             clientmock.return_value.web_client.users_info.return_value = mock_user_response
-            mock_room_response = MagicMock(name="conversations_info_mock")
-            mock_room_response.status_code = 200
-            mock_room_response.data = {"channel": {"is_im": False, "is_private": True, "name": "a private channel"}}
-            clientmock.return_value.web_client.conversations_info.return_value = mock_room_response
+            mock_channel_response = MagicMock(name="conversations_info_mock")
+            mock_channel_response.status_code = 200
+            mock_channel_response.data = {"channel": {"is_im": False, "is_private": True, "name": "a private channel"}}
+            clientmock.return_value.web_client.conversations_info.return_value = mock_channel_response
             mock_list_response = MagicMock(name="conversations_list_mock")
             mock_list_response.status_code = 200
             mock_list_response.data = {

@@ -19,7 +19,7 @@ The token should start with `xapp-`, copy it securely
 
 ### Display Information
 
-Set your apps "App Name".
+Set your app's "App Name".
 This is required for the csp chat bot framework.
 
 ## Socket Mode
@@ -66,7 +66,7 @@ Navigate to the `Scopes` panel and ensure the following scopes are added:
 - `users:read.email`: View email addresses of people in a workspace
 - `users:write`: Set presence for the bot
 
-Under the `OAuth Tokens` panel, yoyu should see a `Bot User OAuth Token`.
+Under the `OAuth Tokens` panel, you should see a `Bot User OAuth Token`.
 The token should start with `xoxb-`, copy it securely.
 
 # Managing tokens
