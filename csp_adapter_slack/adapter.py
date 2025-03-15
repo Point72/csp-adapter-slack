@@ -48,9 +48,9 @@ class SlackAdapterManager(AdapterManagerImpl):
         self._thread: Thread = None
 
         # lookups for mentions and redirection
-        self._room_id_to_room_name: Dict[str, str] = {}
-        self._room_id_to_room_type: Dict[str, str] = {}
-        self._room_name_to_room_id: Dict[str, str] = {}
+        self._channel_id_to_channel_name: Dict[str, str] = {}
+        self._channel_id_to_channel_type: Dict[str, str] = {}
+        self._channel_name_to_channel_id: Dict[str, str] = {}
         self._user_id_to_user_name: Dict[str, str] = {}
         self._user_id_to_user_email: Dict[str, str] = {}
         self._user_name_to_user_id: Dict[str, str] = {}
@@ -127,7 +127,10 @@ class SlackAdapterManager(AdapterManagerImpl):
                     self._user_name_to_user_id[name] = user_id  # TODO is this 1-1 in slack?
                     self._user_id_to_user_email[user_id] = email
                     self._user_email_to_user_id[email] = user_id
-            return self._user_name_to_user_id.get(user_name, None)
+            user_id = self._user_name_to_user_id.get(user_name, None)
+            if user_id is None:
+                # no user found
+                raise ValueError(f"User {user_name} not found in Slack")
         return user_id
 
     def _channel_data_to_channel_kind(self, data) -> str:
@@ -139,8 +142,8 @@ class SlackAdapterManager(AdapterManagerImpl):
 
     def _get_channel_from_id(self, channel_id):
         # try to pull from cache
-        name = self._room_id_to_room_name.get(channel_id, None)
-        kind = self._room_id_to_room_type.get(channel_id, None)
+        name = self._channel_id_to_channel_name.get(channel_id, None)
+        kind = self._channel_id_to_channel_type.get(channel_id, None)
 
         # if none, refresh data via web client
         if name is None:
@@ -154,14 +157,25 @@ class SlackAdapterManager(AdapterManagerImpl):
                 else:
                     name = ret.data["channel"]["name"]
 
-                self._room_id_to_room_name[channel_id] = name
-                self._room_name_to_room_id[name] = channel_id
-                self._room_id_to_room_type[channel_id] = kind
+                if name == "IM":
+                    # store by the name of the user
+                    user = ret.data["channel"]["user"]
+                    user_name = self._get_user_from_id(user)[0]
+                    self._channel_name_to_channel_id[user_name] = channel_id
+                else:
+                    self._channel_name_to_channel_id[name] = channel_id
+                self._channel_id_to_channel_name[channel_id] = name
+                self._channel_id_to_channel_type[channel_id] = kind
         return name, kind
 
     def _get_channel_from_name(self, channel_name):
-        # try to pull from cache
-        channel_id = self._room_name_to_room_id.get(channel_name, None)
+        # first, see if its a regular name or tagged name
+        if channel_name.startswith("<#") and channel_name.endswith("|>"):
+            # strip out the tag
+            channel_id = channel_name[2:-2]
+        else:
+            # try to pull from cache
+            channel_id = self._channel_name_to_channel_id.get(channel_name, None)
 
         # if none, refresh data via web client
         if channel_id is None:
@@ -174,10 +188,13 @@ class SlackAdapterManager(AdapterManagerImpl):
                     name = channel["name"]
                     channel_id = channel["id"]
                     kind = self._channel_data_to_channel_kind(channel)
-                    self._room_id_to_room_name[channel_id] = name
-                    self._room_name_to_room_id[name] = channel_id
-                    self._room_id_to_room_type[channel_id] = kind
-            return self._room_name_to_room_id.get(channel_name, None)
+                    self._channel_id_to_channel_name[channel_id] = name
+                    self._channel_name_to_channel_id[name] = channel_id
+                    self._channel_id_to_channel_type[channel_id] = kind
+            channel_id = self._channel_name_to_channel_id.get(channel_name, None)
+            if channel_id is None:
+                # no channel found
+                raise ValueError(f"Channel {channel_name} not found in Slack")
         return channel_id
 
     def _get_tags_from_message(self, blocks) -> List[str]:
@@ -248,7 +265,6 @@ class SlackAdapterManager(AdapterManagerImpl):
                     channel_id = slack_msg.channel_id
 
                 elif hasattr(slack_msg, "channel") and slack_msg.channel:
-                    # TODO DM
                     channel_id = self._get_channel_from_name(slack_msg.channel)
 
                 # pull text or reaction
@@ -268,11 +284,10 @@ class SlackAdapterManager(AdapterManagerImpl):
                             text=getattr(slack_msg, "msg", ""),
                         )
                     except SlackApiError:
-                        # TODO
-                        ...
+                        log.exception("Failed to send message to Slack")
                 else:
                     # cannot send empty message, log an error
-                    log.error(f"Received malformed SlackMessage instance: {slack_msg}")
+                    log.exception(f"Received malformed SlackMessage instance: {slack_msg}")
 
             if not self._inqueue.empty():
                 # pull all SlackMessages from queue
