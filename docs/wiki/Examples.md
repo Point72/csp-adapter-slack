@@ -4,7 +4,7 @@ Additionally, they assume all optional settings in [Setup](Setup) have been enab
 
 # Emoji Wave
 
-Here is a simple example that waves when you mention the bot and say `hello`.
+Here is a simple example that waves when someone says `hello` in a room or direct message to the bot.
 It is available in-source at [`csp_adapter_slack/examples/hello.py`](https://github.com/point72/csp-adapter-slack/csp_adapter_slack/examples/hello.py).
 
 ```python
