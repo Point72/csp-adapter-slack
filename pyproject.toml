@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "csp_adapter_slack"
 description = "A csp adapter for slack"
-version = "0.2.0"
+version = "0.3.0"
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
@@ -62,7 +62,7 @@ Repository = "https://github.com/point72/csp-adapter-slack"
 Homepage = "https://github.com/point72/csp-adapter-slack"
 
 [tool.bumpversion]
-current_version = "0.2.0"
+current_version = "0.3.0"
 commit = true
 tag = false
 commit_args = "-s"
