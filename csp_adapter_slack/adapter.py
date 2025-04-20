@@ -120,13 +120,29 @@ class SlackAdapterManager(AdapterManagerImpl):
             if ret.status_code == 200:
                 # TODO OAuth scopes required
                 for user in ret.data["members"]:
+                    # Grab name
                     name = user["profile"].get("real_name_normalized", user["name"])
-                    user_id = user["profile"]["id"]
-                    email = user["profile"]["email"]
+
+                    # Try to grab id
+                    if "id" in user:
+                        user_id = user["id"]
+                    elif "id" in user["profile"]:
+                        user_id = user["profile"]["id"]
+                    else:
+                        raise RuntimeError(f"No id found in user profile: {user}")
+
+                    # Try to grab email
+                    if "email" in user["profile"]:
+                        email = user["profile"]["email"]
+                    else:
+                        log.warning(f"No email found in user profile, using id: {user}")
+                        email = user_id
+
                     self._user_id_to_user_name[user_id] = name
                     self._user_name_to_user_id[name] = user_id  # TODO is this 1-1 in slack?
                     self._user_id_to_user_email[user_id] = email
                     self._user_email_to_user_id[email] = user_id
+
             user_id = self._user_name_to_user_id.get(user_name, None)
             if user_id is None:
                 # no user found
