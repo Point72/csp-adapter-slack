@@ -1,8 +1,5 @@
 `csp-adapter-slack` is written in Python. While prebuilt wheels are provided for end users, it is also straightforward to build `csp-adapter-slack` from either the Python [source distribution](https://packaging.python.org/en/latest/specifications/source-distribution-format/) or the GitHub repository.
 
-## Table of Contents
-
-- [Table of Contents](#table-of-contents)
 - [Make commands](#make-commands)
 - [Prerequisites](#prerequisites)
 - [Clone](#clone)
