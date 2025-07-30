@@ -2,9 +2,10 @@
 
 A [csp](https://github.com/point72/csp) adapter for [slack](https://slack.com)
 
-[![Build Status](https://github.com/point72/csp-adapter-slack/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/point72/csp-adapter-slack/actions?query=workflow%3A%22Build+Status%22)
+[![Build Status](https://github.com/Point72/csp-adapter-slack/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/Point72/csp-adapter-slack/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/Point72/csp-adapter-slack/branch/main/graph/badge.svg)](https://codecov.io/gh/Point72/csp-adapter-slack)
 [![GitHub issues](https://img.shields.io/github/issues/point72/csp-adapter-slack.svg)](https://github.com/point72/csp-adapter-slack/issues)
-[![PyPI](https://img.shields.io/pypi/l/csp-adapter-slack.svg)](https://pypi.python.org/pypi/csp-adapter-slack)
+[![License](https://img.shields.io/github/license/Point72/csp-adapter-slack)](https://github.com/Point72/csp-adapter-slack)
 [![PyPI](https://img.shields.io/pypi/v/csp-adapter-slack.svg)](https://pypi.python.org/pypi/csp-adapter-slack)
 
 ## Features
@@ -34,3 +35,6 @@ conda install csp csp-adapter-slack -c conda-forge
 ## License
 
 This software is licensed under the Apache 2.0 license. See the [LICENSE](https://github.com/Point72/csp-adapter-slack/blob/main/LICENSE) file for details.
+
+> [!NOTE]
+> This library was generated using [copier](https://copier.readthedocs.io/en/stable/) from the [Base Python Project Template repository](https://github.com/python-project-templates/base).
