@@ -146,6 +146,7 @@ csp_adapter_slack/extension
 # Jupyter
 .ipynb_checkpoints
 .autoversion
+Untitled*.ipynb
 !csp_adapter_slack/extension/csp_adapter_slack.json
 !csp_adapter_slack/extension/install.json
 csp_adapter_slack/nbextension
