@@ -21,7 +21,7 @@ def add_reaction_when_mentioned(msg: ts[SlackMessage]) -> ts[SlackMessage]:
 
 
 def graph():
-    # Create a DiscordAdapter object
+    # Create a Slack Adapter object
     adapter = SlackAdapterManager(config)
 
     # Subscribe and unroll the messages
