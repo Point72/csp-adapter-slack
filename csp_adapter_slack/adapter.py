@@ -1,371 +1,249 @@
-import threading
-from logging import getLogger
-from queue import Queue
-from threading import Thread
-from time import sleep
-from typing import Dict, List, TypeVar
+"""Slack adapter for CSP using chatom.
+
+This module provides a CSP adapter for Slack by wrapping chatom's
+SlackBackend. It provides Slack-specific enhancements on top of
+the generic chatom CSP layer.
+"""
+
+import asyncio
+import logging
+from typing import Optional, Set
 
 import csp
-from csp.impl.adaptermanager import AdapterManagerImpl
-from csp.impl.outputadapter import OutputAdapter
-from csp.impl.pushadapter import PushInputAdapter
-from csp.impl.types.tstype import ts
-from csp.impl.wiring import py_output_adapter_def, py_push_adapter_def
-from slack_sdk.errors import SlackApiError
-from slack_sdk.socket_mode import SocketModeClient
-from slack_sdk.socket_mode.request import SocketModeRequest
-from slack_sdk.socket_mode.response import SocketModeResponse
-from slack_sdk.web import WebClient
+from chatom.csp import BackendAdapter
+from chatom.slack import SlackBackend, SlackConfig, SlackMessage
+from chatom.slack.presence import SlackPresenceStatus
+from csp import ts
 
-from .adapter_config import SlackAdapterConfig
-from .message import SlackMessage
+__all__ = (
+    "SlackAdapter",
+    "SlackPresenceStatus",
+)
 
-T = TypeVar("T")
-log = getLogger(__file__)
+log = logging.getLogger(__name__)
 
 
-__all__ = ("SlackAdapterManager", "SlackInputAdapterImpl", "SlackOutputAdapterImpl")
+class SlackAdapter(BackendAdapter):
+    """CSP adapter for Slack using chatom's SlackBackend.
 
+    This adapter wraps chatom's SlackBackend and provides a CSP
+    interface for reading and writing Slack messages.
 
-class SlackAdapterManager(AdapterManagerImpl):
-    def __init__(self, config: SlackAdapterConfig):
-        self._slack_client = SocketModeClient(
-            app_token=config.app_token,
-            web_client=WebClient(token=config.bot_token, ssl=config.ssl),
+    The adapter handles:
+    - Message subscription via Socket Mode
+    - Message publishing
+    - Presence management
+    - Channel/user name resolution
+
+    Attributes:
+        backend: The underlying SlackBackend.
+        config: The SlackConfig used by the backend.
+
+    Example:
+        >>> from chatom.slack import SlackConfig
+        >>> from csp_adapter_slack import SlackAdapter
+        >>>
+        >>> config = SlackConfig(
+        ...     bot_token="xoxb-your-bot-token",
+        ...     app_token="xapp-your-app-token",  # For Socket Mode
+        ... )
+        >>> adapter = SlackAdapter(config)
+        >>>
+        >>> @csp.graph
+        ... def my_bot():
+        ...     messages = adapter.subscribe()
+        ...     responses = process_messages(messages)
+        ...     adapter.publish(responses)
+        >>>
+        >>> csp.run(my_bot, starttime=datetime.now(), endtime=timedelta(hours=8))
+    """
+
+    def __init__(self, config: SlackConfig):
+        """Initialize the Slack adapter.
+
+        Args:
+            config: Slack configuration from chatom.
+        """
+        backend = SlackBackend(config=config)
+        super().__init__(backend)
+        self._config = config
+
+    @property
+    def config(self) -> SlackConfig:
+        """Get the Slack configuration."""
+        return self._config
+
+    @property
+    def slack_backend(self) -> SlackBackend:
+        """Get the underlying SlackBackend."""
+        return self._backend
+
+    # @csp.graph # NOTE: cannot use decorator, https://github.com/Point72/csp/issues/183
+    def subscribe(
+        self,
+        channels: Optional[Set[str]] = None,
+        skip_own: bool = True,
+        skip_history: bool = True,
+    ) -> ts[[SlackMessage]]:
+        """Subscribe to Slack messages.
+
+        Args:
+            channels: Optional set of channels to filter. Can be channel IDs
+                or channel names; names will be resolved to IDs at connection time.
+            skip_own: If True, skip messages from the bot itself.
+            skip_history: If True, skip messages before stream started.
+
+        Returns:
+            Time series of SlackMessage lists.
+
+        Example:
+            >>> @csp.graph
+            ... def my_bot():
+            ...     # Subscribe to specific channels by name or ID
+            ...     messages = adapter.subscribe(channels={"general", "C12345"})
+            ...     # Or all channels
+            ...     messages = adapter.subscribe()
+        """
+        return super().subscribe(
+            channels=channels,
+            skip_own=skip_own,
+            skip_history=skip_history,
         )
-        self._slack_client.socket_mode_request_listeners.append(self._process_slack_message)
 
-        # down stream edges
-        self._subscribers = []
-        self._publishers = []
-
-        # message queues
-        self._inqueue: Queue[SlackMessage] = Queue()
-        self._outqueue: Queue[SlackMessage] = Queue()
-
-        # handler thread
-        self._running: bool = False
-        self._thread: Thread = None
-
-        # lookups for mentions and redirection
-        self._channel_id_to_channel_name: Dict[str, str] = {}
-        self._channel_id_to_channel_type: Dict[str, str] = {}
-        self._channel_name_to_channel_id: Dict[str, str] = {}
-        self._user_id_to_user_name: Dict[str, str] = {}
-        self._user_id_to_user_email: Dict[str, str] = {}
-        self._user_name_to_user_id: Dict[str, str] = {}
-        self._user_email_to_user_id: Dict[str, str] = {}
-
-        # if subscribed to mentions AND events, will get 2 copies,
-        # so we want to dedupe by id
-        self._seen_msg_ids = set()
-
-    def subscribe(self):
-        return _slack_input_adapter(self, push_mode=csp.PushMode.NON_COLLAPSING)
-
+    # @csp.graph. # NOTE: cannot use decorator, https://github.com/Point72/csp/issues/183
     def publish(self, msg: ts[SlackMessage]):
-        return _slack_output_adapter(self, msg)
+        """Publish messages to Slack.
 
-    def _create(self, engine, memo):
-        # We'll avoid having a second class and make our AdapterManager and AdapterManagerImpl the same
-        super().__init__(engine)
-        return self
+        Args:
+            msg: Time series of SlackMessages to send.
 
-    def start(self, starttime, endtime):
-        self._running = True
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
+        Example:
+            >>> @csp.graph
+            ... def my_bot():
+            ...     response = csp.const(SlackMessage(
+            ...         channel_id="C12345",
+            ...         content="Hello from the bot!",
+            ...     ))
+            ...     adapter.publish(response)
+        """
+        # Use the base adapter's publish - it accepts Message which
+        # SlackMessage inherits from
+        super().publish(msg)
 
-    def stop(self):
-        if self._running:
-            self._running = False
-            self._slack_client.close()
-            self._thread.join()
+    @csp.node
+    def _add_reaction(self, msg: ts[SlackMessage], emoji: ts[str], timeout: float = 5.0):
+        """Internal node for adding reactions to messages."""
+        if csp.ticked(msg, emoji):
+            message = msg
+            reaction_emoji = emoji
+            config = self._config
+            backend_class = type(self._backend)
 
-    def register_subscriber(self, adapter):
-        if adapter not in self._subscribers:
-            self._subscribers.append(adapter)
-
-    def register_publisher(self, adapter):
-        if adapter not in self._publishers:
-            self._publishers.append(adapter)
-
-    def _get_user_from_id(self, user_id):
-        # try to pull from cache
-        name = self._user_id_to_user_name.get(user_id, None)
-        email = self._user_id_to_user_email.get(user_id, None)
-
-        # if none, refresh data via web client
-        if name is None or email is None:
-            ret = self._slack_client.web_client.users_info(user=user_id)
-            if ret.status_code == 200:
-                # TODO OAuth scopes required
-                name = ret.data["user"]["profile"].get("real_name_normalized", ret.data["user"]["name"])
-                email = ret.data["user"]["profile"].get("email", "")
-                self._user_id_to_user_name[user_id] = name
-                self._user_name_to_user_id[name] = user_id  # TODO is this 1-1 in slack?
-                self._user_id_to_user_email[user_id] = email
-                self._user_email_to_user_id[email] = user_id
-        return name, email
-
-    def _get_user_from_name(self, user_name):
-        # try to pull from cache
-        user_id = self._user_name_to_user_id.get(user_name, None)
-
-        # if none, refresh data via web client
-        if user_id is None:
-            # unfortunately the reverse lookup is not super nice...
-            # we need to pull all users and build the reverse mapping
-            ret = self._slack_client.web_client.users_list()
-            if ret.status_code == 200:
-                # TODO OAuth scopes required
-                for user in ret.data["members"]:
-                    # Grab name
-                    name = user["profile"].get("real_name_normalized", user["name"])
-
-                    # Try to grab id
-                    if "id" in user:
-                        user_id = user["id"]
-                    elif "id" in user["profile"]:
-                        user_id = user["profile"]["id"]
-                    else:
-                        raise RuntimeError(f"No id found in user profile: {user}")
-
-                    # Try to grab email
-                    if "email" in user["profile"]:
-                        email = user["profile"]["email"]
-                    else:
-                        log.warning(f"No email found in user profile, using id: {user}")
-                        email = user_id
-
-                    self._user_id_to_user_name[user_id] = name
-                    self._user_name_to_user_id[name] = user_id  # TODO is this 1-1 in slack?
-                    self._user_id_to_user_email[user_id] = email
-                    self._user_email_to_user_id[email] = user_id
-
-            user_id = self._user_name_to_user_id.get(user_name, None)
-            if user_id is None:
-                # no user found
-                raise ValueError(f"User {user_name} not found in Slack")
-        return user_id
-
-    def _channel_data_to_channel_kind(self, data) -> str:
-        if data.get("is_im", False):
-            return "message"
-        if data.get("is_private", False):
-            return "private"
-        return "public"
-
-    def _get_channel_from_id(self, channel_id):
-        # try to pull from cache
-        name = self._channel_id_to_channel_name.get(channel_id, None)
-        kind = self._channel_id_to_channel_type.get(channel_id, None)
-
-        # if none, refresh data via web client
-        if name is None:
-            ret = self._slack_client.web_client.conversations_info(channel=channel_id)
-            if ret.status_code == 200:
-                # TODO OAuth scopes required
-                kind = self._channel_data_to_channel_kind(ret.data["channel"])
-                if kind == "message":
-                    # TODO use same behavior as symphony adapter
-                    name = "IM"
-                else:
-                    name = ret.data["channel"]["name"]
-
-                if name == "IM":
-                    # store by the name of the user
-                    user = ret.data["channel"]["user"]
-                    user_name = self._get_user_from_id(user)[0]
-                    self._channel_name_to_channel_id[user_name] = channel_id
-                else:
-                    self._channel_name_to_channel_id[name] = channel_id
-                self._channel_id_to_channel_name[channel_id] = name
-                self._channel_id_to_channel_type[channel_id] = kind
-        return name, kind
-
-    def _get_channel_from_name(self, channel_name):
-        # first, see if its a regular name or tagged name
-        if channel_name.startswith("<#") and channel_name.endswith("|>"):
-            # strip out the tag
-            channel_id = channel_name[2:-2]
-        else:
-            # try to pull from cache
-            channel_id = self._channel_name_to_channel_id.get(channel_name, None)
-
-        # if none, refresh data via web client
-        if channel_id is None:
-            # unfortunately the reverse lookup is not super nice...
-            # we need to pull all channels and build the reverse mapping
-            ret = self._slack_client.web_client.conversations_list()
-            if ret.status_code == 200:
-                # TODO OAuth scopes required
-                for channel in ret.data["channels"]:
-                    name = channel["name"]
-                    channel_id = channel["id"]
-                    kind = self._channel_data_to_channel_kind(channel)
-                    self._channel_id_to_channel_name[channel_id] = name
-                    self._channel_name_to_channel_id[name] = channel_id
-                    self._channel_id_to_channel_type[channel_id] = kind
-            channel_id = self._channel_name_to_channel_id.get(channel_name, None)
-            if channel_id is None:
-                # no channel found
-                raise ValueError(f"Channel {channel_name} not found in Slack")
-        return channel_id
-
-    def _get_tags_from_message(self, blocks) -> List[str]:
-        """extract tags from message, potentially excluding the bot's own @"""
-        tags = []
-        to_search = blocks.copy()
-
-        while to_search:
-            element = to_search.pop()
-            # add subsections
-            if element.get("elements", []):
-                to_search.extend(element.get("elements"))
-
-            if element.get("type", "") == "user":
-                tag_id = element.get("user_id")
-                name, _ = self._get_user_from_id(tag_id)
-                if name:
-                    tags.append(name)
-        return tags
-
-    def _process_slack_message(self, client: SocketModeClient, req: SocketModeRequest):
-        log.info(req.payload)
-        if req.type == "events_api":
-            # Acknowledge the request anyway
-            response = SocketModeResponse(envelope_id=req.envelope_id)
-            client.send_socket_mode_response(response)
-
-            if req.payload["event"]["ts"] in self._seen_msg_ids:
-                # already seen, pop it and move on
-                self._seen_msg_ids.remove(req.payload["event"]["ts"])
-                return
-
-            # else add it so we don't process it again
-            self._seen_msg_ids.add(req.payload["event"]["ts"])
-
-            if req.payload["event"]["type"] in ("message", "app_mention") and req.payload["event"].get("subtype") is None:
-                user, user_email = self._get_user_from_id(req.payload["event"]["user"])
-                channel, channel_type = self._get_channel_from_id(req.payload["event"]["channel"])
-
-                tags = self._get_tags_from_message(req.payload["event"]["blocks"])
-                slack_msg = SlackMessage(
-                    user=user or "",
-                    user_email=user_email or "",
-                    user_id=req.payload["event"]["user"],
-                    tags=tags,
-                    channel=channel or "",
-                    channel_id=req.payload["event"]["channel"],
-                    channel_type=channel_type or "",
-                    msg=req.payload["event"]["text"],
-                    reaction="",
-                    thread=req.payload["event"]["ts"],
-                    payload=req.payload.copy(),
-                )
-                self._inqueue.put(slack_msg)
-
-    def _run(self):
-        self._slack_client.connect()
-
-        while self._running:
-            # drain outbound
-            while not self._outqueue.empty():
-                # pull SlackMessage from queue
-                slack_msg = self._outqueue.get()
-
-                # refactor into slack command
-                # grab channel or DM
-                if hasattr(slack_msg, "channel_id") and slack_msg.channel_id:
-                    channel_id = slack_msg.channel_id
-
-                elif hasattr(slack_msg, "channel") and slack_msg.channel:
-                    channel_id = self._get_channel_from_name(slack_msg.channel)
-
-                # pull text or reaction
-                if hasattr(slack_msg, "reaction") and slack_msg.reaction and hasattr(slack_msg, "thread") and slack_msg.thread:
-                    # TODO
-                    self._slack_client.web_client.reactions_add(
-                        channel=channel_id,
-                        name=slack_msg.reaction,
-                        timestamp=slack_msg.thread,
-                    )
-
-                elif hasattr(slack_msg, "msg") and slack_msg.msg:
+            def run_reaction():
+                async def add_reaction_async():
+                    thread_backend = backend_class(config=config)
                     try:
-                        # send text to channel
-                        self._slack_client.web_client.chat_postMessage(
-                            channel=channel_id,
-                            text=getattr(slack_msg, "msg", ""),
+                        await asyncio.wait_for(thread_backend.connect(), timeout=timeout)
+                        await asyncio.wait_for(
+                            thread_backend.add_reaction(
+                                message=message,
+                                emoji=reaction_emoji,
+                            ),
+                            timeout=timeout,
                         )
-                    except SlackApiError:
-                        log.exception("Failed to send message to Slack")
-                else:
-                    # cannot send empty message, log an error
-                    log.exception(f"Received malformed SlackMessage instance: {slack_msg}")
+                    except asyncio.TimeoutError:
+                        log.error("Timeout adding reaction")
+                    except Exception:
+                        log.exception("Failed adding reaction")
+                    finally:
+                        try:
+                            await thread_backend.disconnect()
+                        except Exception:
+                            pass
 
-            if not self._inqueue.empty():
-                # pull all SlackMessages from queue
-                # do as burst to match SymphonyAdapter
-                slack_msgs = []
-                while not self._inqueue.empty():
-                    slack_msgs.append(self._inqueue.get())
+                try:
+                    asyncio.run(add_reaction_async())
+                except Exception:
+                    log.exception("Error in reaction thread")
 
-                # push to all the subscribers
-                for adapter in self._subscribers:
-                    adapter.push_tick(slack_msgs)
+            import threading
 
-            # do short sleep
-            sleep(0.1)
+            thread = threading.Thread(target=run_reaction, daemon=True)
+            thread.start()
 
-            # liveness check
-            if not self._thread.is_alive():
-                self._running = False
-                self._thread.join()
+    # @csp.graph # NOTE: cannot use decorator, https://github.com/Point72/csp/issues/183
+    def publish_reaction(self, msg: ts[SlackMessage], emoji: ts[str], timeout: float = 5.0):
+        """Add a reaction to a Slack message.
 
-        # shut down socket client
-        try:
-            # TODO which one?
-            self._slack_client.close()
-            # self._slack_client.disconnect()
-        except AttributeError:
-            # TODO bug in slack sdk causes an exception to be thrown
-            #   File "slack_sdk/socket_mode/builtin/connection.py", line 191, in disconnect
-            #   self.sock.close()
-            #   ^^^^^^^^^^^^^^^
-            # AttributeError: 'NoneType' object has no attribute 'close'
-            ...
+        Args:
+            msg: Time series of SlackMessages to react to.
+            emoji: Time series of emoji names (without colons, e.g., "wave", "thumbsup").
+            timeout: Timeout for reaction API calls.
 
-    def _on_tick(self, value):
-        self._outqueue.put(value)
+        Example:
+            >>> @csp.graph
+            ... def my_bot():
+            ...     messages = adapter.subscribe()
+            ...     # React with wave to all messages
+            ...     emoji = csp.apply(messages, lambda m: "wave", str)
+            ...     adapter.publish_reaction(messages, emoji)
+        """
+        self._add_reaction(msg=msg, emoji=emoji, timeout=timeout)
 
+    @csp.node
+    def _set_slack_presence(self, presence: ts[SlackPresenceStatus], timeout: float = 5.0):
+        """Internal node for setting Slack presence.
 
-class SlackInputAdapterImpl(PushInputAdapter):
-    def __init__(self, manager):
-        manager.register_subscriber(self)
-        super().__init__()
+        Uses a thread with asyncio.run() to avoid event loop conflicts.
+        Creates a new backend instance per call to ensure proper async context.
+        """
+        if csp.ticked(presence):
+            status = presence.value  # SlackPresenceStatus is an Enum with string values
+            config = self._config
+            backend_class = type(self._backend)
 
+            def run_presence():
+                async def set_presence_async():
+                    # Create new backend for this thread (sessions are loop-bound)
+                    thread_backend = backend_class(config=config)
+                    try:
+                        await asyncio.wait_for(thread_backend.connect(), timeout=timeout)
+                        await asyncio.wait_for(thread_backend.set_presence(status), timeout=timeout)
+                    except asyncio.TimeoutError:
+                        log.error("Timeout setting presence")
+                    except Exception:
+                        log.exception("Failed setting presence")
+                    finally:
+                        try:
+                            await thread_backend.disconnect()
+                        except Exception:
+                            pass
 
-class SlackOutputAdapterImpl(OutputAdapter):
-    def __init__(self, manager):
-        manager.register_publisher(self)
-        self._manager = manager
-        super().__init__()
+                try:
+                    asyncio.run(set_presence_async())
+                except Exception:
+                    log.exception("Error in presence thread")
 
-    def on_tick(self, time, value):
-        self._manager._on_tick(value)
+            import threading
 
+            thread = threading.Thread(target=run_presence, daemon=True)
+            thread.start()
 
-_slack_input_adapter = py_push_adapter_def(
-    name="SlackInputAdapter",
-    adapterimpl=SlackInputAdapterImpl,
-    out_type=ts[[SlackMessage]],
-    manager_type=SlackAdapterManager,
-)
-_slack_output_adapter = py_output_adapter_def(
-    name="SlackOutputAdapter",
-    adapterimpl=SlackOutputAdapterImpl,
-    manager_type=SlackAdapterManager,
-    input=ts[SlackMessage],
-)
+    # @csp.graph # NOTE: cannot use decorator, https://github.com/Point72/csp/issues/183
+    def publish_presence(self, presence: ts[SlackPresenceStatus], timeout: float = 5.0):
+        """Publish presence status updates.
+
+        Note: Setting presence in Slack typically requires a user token (xoxp-),
+        not a bot token (xoxb-). This may not work with bot tokens.
+
+        Args:
+            presence: Time series of SlackPresenceStatus values.
+            timeout: Timeout for presence API calls.
+
+        Example:
+            >>> @csp.graph
+            ... def my_bot():
+            ...     presence = csp.const(SlackPresenceStatus.ACTIVE)
+            ...     adapter.publish_presence(presence)
+        """
+        self._set_slack_presence(presence=presence, timeout=timeout)
