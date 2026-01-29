@@ -5,7 +5,7 @@ build-backend="hatchling.build"
 [project]
 name = "csp-adapter-slack"
 authors = [{name = "Point72, L.P.", email = "CSPOpenSource@point72.com"}]
-description = "A csp adapter for slack"
+description = "A csp adapter for slack using chatom"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 version = "0.3.0"
@@ -33,6 +33,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "chatom>=0.1.0,<0.2.0",
     "csp",
     "pydantic>=2",
     "slack-sdk>=3",
