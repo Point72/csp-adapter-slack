@@ -110,22 +110,6 @@ artifacts = []
 src = "/"
 
 [tool.hatch.build.targets.sdist]
-<<<<<<< before updating
-packages = ["csp_adapter_slack"]
-exclude = [
-    "/.github",
-    "/.gitignore",
-    "/docs",
-]
-
-[tool.hatch.build.targets.wheel]
-packages = ["csp_adapter_slack"]
-exclude = [
-    "/.github",
-    "/.gitignore",
-    "/pyproject.toml",
-    "/docs",
-=======
 packages = [
     "csp_adapter_slack",
 ]
@@ -133,7 +117,6 @@ packages = [
 [tool.hatch.build.targets.wheel]
 packages = [
     "csp_adapter_slack",
->>>>>>> after updating
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
@@ -168,11 +151,7 @@ section-order = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-<<<<<<< before updating
-"__init__.py" = ["F401", "F403"]
-=======
 "__init__.py" = [
     "F401",
     "F403",
 ]
->>>>>>> after updating
