@@ -141,14 +141,12 @@ js/node_modules
 js/test-results
 js/playwright-report
 js/*.tgz
-csp_adapter_slack/extension
 
 # Jupyter
 .ipynb_checkpoints
 .autoversion
 Untitled*.ipynb
-!csp_adapter_slack/extension/csp_adapter_slack.json
-!csp_adapter_slack/extension/install.json
+csp_adapter_slack/extension
 csp_adapter_slack/nbextension
 csp_adapter_slack/labextension
 
@@ -158,6 +156,12 @@ csp_adapter_slack/labextension
 # Rust
 target
 
+<<<<<<< before updating
 # Secrets
 .app_token
 .bot_token
+=======
+# Hydra
+outputs/
+multirun/
+>>>>>>> after updating
