@@ -156,12 +156,10 @@ csp_adapter_slack/labextension
 # Rust
 target
 
-<<<<<<< before updating
-# Secrets
-.app_token
-.bot_token
-=======
 # Hydra
 outputs/
 multirun/
->>>>>>> after updating
+
+# Secrets
+.app_token
+.bot_token
