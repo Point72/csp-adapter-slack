@@ -7,6 +7,7 @@ the generic chatom CSP layer.
 
 import asyncio
 import logging
+import threading
 from typing import Optional, Set
 
 import csp
@@ -166,8 +167,6 @@ class SlackAdapter(BackendAdapter):
                 except Exception:
                     log.exception("Error in reaction thread")
 
-            import threading
-
             thread = threading.Thread(target=run_reaction, daemon=True)
             thread.start()
 
@@ -223,8 +222,6 @@ class SlackAdapter(BackendAdapter):
                     asyncio.run(set_presence_async())
                 except Exception:
                     log.exception("Error in presence thread")
-
-            import threading
 
             thread = threading.Thread(target=run_presence, daemon=True)
             thread.start()
