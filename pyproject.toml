@@ -87,6 +87,7 @@ branch = true
 omit = [
     "csp_adapter_slack/tests/integration/",
 ]
+
 [tool.coverage.report]
 exclude_also = [
     "raise NotImplementedError",
