@@ -58,6 +58,8 @@ develop = [
     "ty",
     "uv",
     "wheel",
+    # v1
+    "chatom>=0.1.0,<0.2.0",
 ]
 
 [project.scripts]
