@@ -146,6 +146,13 @@ target
 outputs/
 multirun/
 
+<<<<<<< before updating
 # Secrets
 .app_token
 .bot_token
+=======
+# AI
+ROADMAP.md
+AGENTS.md
+.github/hooks/sdlc.json
+>>>>>>> after updating
