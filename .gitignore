@@ -151,7 +151,11 @@ multirun/
 ROADMAP.md
 AGENTS.md
 .github/hooks/sdlc.json
+<<<<<<< before updating
 
 # Secrets
 .app_token
 .bot_token
+=======
+.superpowers
+>>>>>>> after updating
