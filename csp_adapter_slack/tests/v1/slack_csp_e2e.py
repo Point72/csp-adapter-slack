@@ -18,8 +18,7 @@ Usage:
 import asyncio
 import os
 import sys
-from datetime import datetime, timedelta
-from typing import List, Optional
+from datetime import datetime, timedelta, timezone
 
 import csp
 from chatom.base import Channel, Message
@@ -28,11 +27,12 @@ from chatom.slack import SlackBackend, SlackConfig, SlackMessage
 from chatom.slack.mention import mention_user
 from chatom.slack.presence import SlackPresenceStatus
 from csp import ts
+from slack_sdk.errors import SlackClientError
 
 from csp_adapter_slack.v1 import SlackAdapter
 
 
-def get_env(name: str, required: bool = True) -> Optional[str]:
+def get_env(name: str, required: bool = True) -> str | None:
     """Get environment variable with validation."""
     value = os.environ.get(name)
     if required and not value:
@@ -56,14 +56,14 @@ class TestState:
     """Container for test state."""
 
     def __init__(self):
-        self.results: List[tuple] = []
-        self.config: Optional[SlackConfig] = None
-        self.channel_id: Optional[str] = None  # Generic field, not backend-specific
-        self.user_id: Optional[str] = None
+        self.results: list[tuple] = []
+        self.config: SlackConfig | None = None
+        self.channel_id: str | None = None  # Generic field, not backend-specific
+        self.user_id: str | None = None
         self.user = None  # Store the user object for mentions
-        self.bot_user_id: Optional[str] = None
-        self.bot_display_name: Optional[str] = None
-        self.received_message: Optional[Message] = None
+        self.bot_user_id: str | None = None
+        self.bot_display_name: str | None = None
+        self.received_message: Message | None = None
         self.waiting_for_inbound: bool = False
         self.test_complete: bool = False
 
@@ -154,7 +154,7 @@ async def setup_and_run_pre_csp_tests():
         for m in history[:3]:
             preview = (m.content or "")[:40].replace("\n", " ")
             print(f"  - {preview}...")
-    except Exception as e:
+    except (SlackClientError, RuntimeError) as e:
         STATE.log(f"Fetch message history failed: {e}", success=False)
         print("  (May require groups:history scope for private channels)")
 
@@ -169,7 +169,7 @@ async def setup_and_run_pre_csp_tests():
             STATE.log("Sent message to DM")
         else:
             STATE.log("Failed to create DM", success=False)
-    except Exception as e:
+    except (SlackClientError, RuntimeError) as e:
         STATE.log(f"Create DM failed: {e}", success=False)
         print("  (May require im:write or mpim:write scope)")
 
@@ -204,7 +204,7 @@ def slack_csp_e2e_graph():
             if step == 0:
                 # Send plain message
                 STATE.section("Test: Send Plain Message (via CSP)")
-                timestamp = datetime.now().strftime("%H:%M:%S")
+                timestamp = datetime.now(timezone.utc).strftime("%H:%M:%S")
                 msg = FormattedMessage().add_text(f"🧪 [CSP E2E] Plain message at {timestamp}")
                 STATE.log(f"Sending plain message at {timestamp}")
                 csp.schedule_alarm(a_step, timedelta(seconds=1), 1)

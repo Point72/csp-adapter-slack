@@ -1,6 +1,5 @@
 from pathlib import Path
 from ssl import SSLContext
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -12,7 +11,7 @@ class SlackAdapterConfig(BaseModel):
 
     app_token: str = Field(description="The app token for the Slack bot")
     bot_token: str = Field(description="The bot token for the Slack bot")
-    ssl: Optional[object] = None
+    ssl: object | None = None
 
     @field_validator("app_token")
     def validate_app_token(cls, v):

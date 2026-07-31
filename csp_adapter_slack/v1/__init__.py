@@ -32,22 +32,16 @@ from .adapter import SlackAdapter
 SlackAdapterConfig = SlackConfig
 
 __all__ = [
-    # Adapter
     "SlackAdapter",
-    # Config
-    "SlackAdapterConfig",  # Legacy
-    "SlackConfig",  # chatom config
-    # Backend (from chatom)
+    "SlackAdapterConfig",
     "SlackBackend",
-    # Message (from chatom)
+    "SlackConfig",
     "SlackMessage",
-    # Presence (from chatom)
     "SlackPresenceStatus",
-    # Mentions (from chatom)
-    "mention_user",
     "mention_channel",
-    "mention_user_group",
-    "mention_here",
     "mention_channel_all",
     "mention_everyone",
+    "mention_here",
+    "mention_user",
+    "mention_user_group",
 ]
