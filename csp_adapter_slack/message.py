@@ -1,5 +1,3 @@
-from typing import List
-
 from csp.impl.struct import Struct
 
 __all__ = ("SlackMessage",)
@@ -15,7 +13,7 @@ class SlackMessage(Struct):
     user_id: str
     """platform-specific id of the author of the message, if available"""
 
-    tags: List[str]
+    tags: list[str]
     """list of users tagged in the `msg` of the message"""
 
     channel: str

@@ -3,7 +3,7 @@
 This module tests the SlackAdapter that wraps chatom's SlackBackend for CSP.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 # Check for CSP availability
 try:
-    import csp  # noqa: F401
+    import csp
     from csp import ts  # noqa: F401
 
     HAS_CSP = True
@@ -392,7 +392,7 @@ class TestSlackAdapterPresence:
             # Run graph briefly
             csp.run(
                 test_graph,
-                starttime=datetime.utcnow(),
+                starttime=datetime.now(timezone.utc),
                 endtime=timedelta(milliseconds=10),
             )
 
@@ -434,6 +434,6 @@ class TestSlackAdapterReactions:
             # Run graph briefly
             csp.run(
                 test_graph,
-                starttime=datetime.utcnow(),
+                starttime=datetime.now(timezone.utc),
                 endtime=timedelta(milliseconds=10),
             )

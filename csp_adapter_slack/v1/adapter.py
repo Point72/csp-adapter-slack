@@ -8,7 +8,6 @@ the generic chatom CSP layer.
 import asyncio
 import logging
 import threading
-from typing import Optional, Set
 
 import csp
 from chatom.csp import BackendAdapter
@@ -82,7 +81,7 @@ class SlackAdapter(BackendAdapter):
     # @csp.graph # NOTE: cannot use decorator, https://github.com/Point72/csp/issues/183
     def subscribe(
         self,
-        channels: Optional[Set[str]] = None,
+        channels: set[str] | None = None,
         skip_own: bool = True,
         skip_history: bool = True,
     ) -> ts[[SlackMessage]]:
@@ -157,10 +156,7 @@ class SlackAdapter(BackendAdapter):
                     except Exception:
                         log.exception("Failed adding reaction")
                     finally:
-                        try:
-                            await thread_backend.disconnect()
-                        except Exception:
-                            pass
+                        await thread_backend.disconnect()
 
                 try:
                     asyncio.run(add_reaction_async())
@@ -213,10 +209,7 @@ class SlackAdapter(BackendAdapter):
                     except Exception:
                         log.exception("Failed setting presence")
                     finally:
-                        try:
-                            await thread_backend.disconnect()
-                        except Exception:
-                            pass
+                        await thread_backend.disconnect()
 
                 try:
                     asyncio.run(set_presence_async())

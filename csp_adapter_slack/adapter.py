@@ -3,7 +3,7 @@ from logging import getLogger
 from queue import Queue
 from threading import Thread
 from time import sleep
-from typing import Dict, List, TypeVar
+from typing import TypeVar
 
 import csp
 from csp.impl.adaptermanager import AdapterManagerImpl
@@ -21,7 +21,7 @@ from .adapter_config import SlackAdapterConfig
 from .message import SlackMessage
 
 T = TypeVar("T")
-log = getLogger(__file__)
+log = getLogger(__name__)
 
 
 __all__ = ("SlackAdapterManager", "SlackInputAdapterImpl", "SlackOutputAdapterImpl")
@@ -48,13 +48,13 @@ class SlackAdapterManager(AdapterManagerImpl):
         self._thread: Thread = None
 
         # lookups for mentions and redirection
-        self._channel_id_to_channel_name: Dict[str, str] = {}
-        self._channel_id_to_channel_type: Dict[str, str] = {}
-        self._channel_name_to_channel_id: Dict[str, str] = {}
-        self._user_id_to_user_name: Dict[str, str] = {}
-        self._user_id_to_user_email: Dict[str, str] = {}
-        self._user_name_to_user_id: Dict[str, str] = {}
-        self._user_email_to_user_id: Dict[str, str] = {}
+        self._channel_id_to_channel_name: dict[str, str] = {}
+        self._channel_id_to_channel_type: dict[str, str] = {}
+        self._channel_name_to_channel_id: dict[str, str] = {}
+        self._user_id_to_user_name: dict[str, str] = {}
+        self._user_id_to_user_email: dict[str, str] = {}
+        self._user_name_to_user_id: dict[str, str] = {}
+        self._user_email_to_user_id: dict[str, str] = {}
 
         # if subscribed to mentions AND events, will get 2 copies,
         # so we want to dedupe by id
@@ -213,7 +213,7 @@ class SlackAdapterManager(AdapterManagerImpl):
                 raise ValueError(f"Channel {channel_name} not found in Slack")
         return channel_id
 
-    def _get_tags_from_message(self, blocks) -> List[str]:
+    def _get_tags_from_message(self, blocks) -> list[str]:
         """extract tags from message, potentially excluding the bot's own @"""
         tags = []
         to_search = blocks.copy()
