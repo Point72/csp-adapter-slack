@@ -1,9 +1,10 @@
 import threading
 from logging import getLogger
 from queue import Queue
+from ssl import SSLContext
 from threading import Thread
 from time import sleep
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import csp
 from csp.impl.adaptermanager import AdapterManagerImpl
@@ -13,6 +14,7 @@ from csp.impl.types.tstype import ts
 from csp.impl.wiring import py_output_adapter_def, py_push_adapter_def
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
+from slack_sdk.socket_mode.client import BaseSocketModeClient
 from slack_sdk.socket_mode.request import SocketModeRequest
 from slack_sdk.socket_mode.response import SocketModeResponse
 from slack_sdk.web import WebClient
@@ -31,7 +33,7 @@ class SlackAdapterManager(AdapterManagerImpl):
     def __init__(self, config: SlackAdapterConfig):
         self._slack_client = SocketModeClient(
             app_token=config.app_token,
-            web_client=WebClient(token=config.bot_token, ssl=config.ssl),
+            web_client=WebClient(token=config.bot_token, ssl=cast(SSLContext | None, config.ssl)),
         )
         self._slack_client.socket_mode_request_listeners.append(self._process_slack_message)
 
@@ -45,7 +47,7 @@ class SlackAdapterManager(AdapterManagerImpl):
 
         # handler thread
         self._running: bool = False
-        self._thread: Thread = None
+        self._thread: Thread | None = None
 
         # lookups for mentions and redirection
         self._channel_id_to_channel_name: dict[str, str] = {}
@@ -231,7 +233,7 @@ class SlackAdapterManager(AdapterManagerImpl):
                     tags.append(name)
         return tags
 
-    def _process_slack_message(self, client: SocketModeClient, req: SocketModeRequest):
+    def _process_slack_message(self, client: BaseSocketModeClient, req: SocketModeRequest):
         log.info(req.payload)
         if req.type == "events_api":
             # Acknowledge the request anyway
