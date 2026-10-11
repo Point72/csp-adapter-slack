@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from chatom.base import Channel, Thread
 from chatom.slack import SlackChannel, SlackUser
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 # Check for CSP availability
 try:
@@ -88,6 +88,8 @@ class TestSlackAdapterConfig:
 
         # Both valid - now returns SecretStr
         config = SlackAdapterConfig(app_token="xapp-valid", bot_token="xoxb-valid")
+        assert isinstance(config.app_token, SecretStr)
+        assert isinstance(config.bot_token, SecretStr)
         assert config.app_token.get_secret_value() == "xapp-valid"
         assert config.bot_token.get_secret_value() == "xoxb-valid"
 
@@ -205,6 +207,7 @@ class TestSlackMessage:
             thread=Thread(id="1234567890.123456"),
         )
         # thread_ts property should return the thread's id
+        assert msg.thread is not None
         assert msg.thread_ts == "1234567890.123456"
         assert msg.thread.id == "1234567890.123456"
 

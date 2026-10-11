@@ -23,7 +23,9 @@ __all__ = (
 log = logging.getLogger(__name__)
 
 
-class SlackAdapter(BackendAdapter):
+# chatom re-exports BackendAdapter behind a try/except fallback, which ty models as a
+# class | function union. The import resolves to the class whenever csp is installed.
+class SlackAdapter(BackendAdapter):  # ty: ignore[invalid-base]
     """CSP adapter for Slack using chatom's SlackBackend.
 
     This adapter wraps chatom's SlackBackend and provides a CSP

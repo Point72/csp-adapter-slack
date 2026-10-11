@@ -49,6 +49,7 @@ develop = [
     "codespell",
     "hatchling",
     "mdformat",
+    "mdformat-frontmatter",
     "mdformat-tables>=1",
     "pytest",
     "pytest-cov",
@@ -86,7 +87,7 @@ replace = 'version = "{new_version}"'
 [tool.coverage.run]
 branch = true
 omit = [
-    "csp_adapter_slack/tests/integration/",
+    "csp_adapter_slack/tests/integration/*",
 ]
 
 [tool.coverage.report]
@@ -150,3 +151,7 @@ section-order = [
     "F401",
     "F403",
 ]
+
+[tool.ty.analysis]
+# csp's ts[...] node DSL is resolved at runtime and has no usable type stubs.
+replace-imports-with-any = ["csp.**"]

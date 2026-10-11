@@ -58,7 +58,7 @@ class TestState:
     def __init__(self):
         self.results: list[tuple] = []
         self.config: SlackConfig | None = None
-        self.channel_id: str | None = None  # Generic field, not backend-specific
+        self.channel_id: str = ""  # Generic field, not backend-specific
         self.user_id: str | None = None
         self.user = None  # Store the user object for mentions
         self.bot_user_id: str | None = None
@@ -183,6 +183,7 @@ async def setup_and_run_pre_csp_tests():
 @csp.graph
 def slack_csp_e2e_graph():
     """CSP graph for message streaming tests."""
+    assert STATE.config is not None, "STATE.config must be set before running the CSP graph"
     adapter = SlackAdapter(STATE.config)
 
     # Subscribe to all messages
